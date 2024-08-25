@@ -1,0 +1,283 @@
+---
+title: "Music Survey Data Analysis"
+author: "Adam Walters, Alexander Grant, Sara Fernandez"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Importing dataframe
+dat <- read.csv("~/Data Science/R/MusicSurveyDataUpdated.csv")
+```
+### Introduction
+Our survey asked students questions about music. All data is generalizing both GSST seniors and juniors, since roughly 40% of our data is from seniors and 60% from juniors.
+
+### Hypotheses
+1. The majority of Computer Science students are music oriented.
+2. Those who listen to music more often will have a stronger effect on their mood and personality.
+3. The most popular genre will have similar rates of lyrics importance.
+4. Males will be more likely to listen to rap music.
+5. Those who use music apps besides Apple Music and Spotify are more likely to listen to music from other languages and find lyrics less important.
+
+### The Data
+* Removed date column
+* Fixed column titles
+* Cleaned free response questions
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readr)
+
+
+
+# Use ggplot to graph the expected grades in relation to both exercise and sleep rates
+plot <- ggplot(dat, aes(x = foreignLanguage, y = lyricImport, color = musicApp)) +
+         geom_point(size = 2) +
+         labs(title = "Music App on Foreign Language Music and Lyric Importance",
+              x = "Listening to Foreign Language Music",
+              y = "Importance of Lyrics",
+              color = "Music App")
+
+plot + scale_color_manual(breaks = c("Apple Music", "Other", "Spotify"),
+                        values = c("indianred2", "dodgerblue", "green3"))
+
+
+# Subset the data to only include those who answered to using `Other` music apps
+df_musicOther = subset(dat, musicApp == "Other")
+
+# Get summary statistics of `foreignLanguage` for students who answered `Other`
+summary(df_musicOther$foreignLanguage)
+
+# Get summary statistics of `lyricsImport` for students who answered `Other`
+summary(df_musicOther$lyricImport)
+```
+figure1
+
+### Analysis
+
+The original hypothesis stated that those who use music apps besides Apple Music and Spotify were more likely to listen to music from other languages as well as find lyrics less importance. The graph found that those in the `Other` category are less likely to listen to foreign music (`foreignLanguage`). Although there is a maximum of 90.0, this is an outlier and the others fall between 5.0 and 40.0. There is a mean of 24.8, which supports the idea that they are less likely to listen to foreign music. With this, we can assume those using `Other` music apps typically do not listen to foreign music which contradicts our hypthesis. The graph also found those in the `Other` category are less likely to find lyrics important. A summary of those in the `Other` category and `lyricImport` finds that there is a minimum of 0.0, a maximum of 65.0, and a mean of 29.0. Majority of those in the category `Other` fall between 0.0 and 40.0. SO it is safe to assume that those who use `Other` music apps are less likely find lyrics important in the music they listen to. This supports the hypothesis.
+
+
+```{r}
+elbow <- function(setDat,maxK){
+  prop<-rep(0,maxK)
+  for(k in 1:maxK){ 
+    km<-kmeans(setDat, centers=k,nstart = 20)   # defining elbow function for determining proper number of clusters
+    prop[k]<-km$betweenss/km$totss
+  }
+  return(prop)
+}
+```
+
+```{r}
+df_sub = dat %>% select("oftenListen", "moodProd")
+
+dfS <- scale(df_sub)
+
+elbow_oftenMood <- elbow(dfS,15)
+#plot(elbow_oftenMood, ylab="Proportion of Variance", xlab = "K") commented out for readability
+```
+
+optimal clusters is between 4 and 6.
+
+```{r}
+clusts<- kmeans(dfS,centers = 4, nstart = 20)
+plot(df_sub$oftenListen,df_sub$moodProd,
+     col = clusts$cluster,
+     pch = 16,
+     ylab = "Effect on Mood/Productivity",
+     xlab = "How often they listen to music",
+     main = "Often listen x Effect on Mood")
+abline(lm(df_sub$moodProd ~df_sub$oftenListen)) # trendline
+```
+figure2
+
+There is a strong correlation between the frequency with which GSST students listen to music and it's effect on mood/productivity. This supports hypothesis 2, "Those who listen to music more often will have a stronger effect on their mood and personality." There is a cluster of individuals in blue that have a decent amount of mood effect, but low frequency of music listening, and also a very high in both cluster in green.
+
+```{r}
+
+df_sub1 = dat %>% select("foreignLanguage", "lyricImport")
+
+dfS1 <- scale(df_sub1)
+
+
+
+elbow_foreignLyric <- elbow(dfS1,15)
+# plot(elbow_foreignLyric, ylab="Proportion of Variance", xlab = "K") , commented out to make HTML File readable
+
+clusts1<- kmeans(dfS1,centers = 4, nstart = 20)
+
+plot(df_sub1$foreignLanguage,df_sub1$lyricImport,
+     col = clusts1$cluster,
+     pch = 16,
+     ylab = "Importance of Lyrics",
+     xlab = "How often they listen to music",
+     main = "Often Listen x Importance Lyrics")
+abline(lm(df_sub1$foreignLang ~df_sub1$lyricImport))
+```
+figure3
+
+```{r}
+
+datmale <- dat %>% filter(gender == "Male")
+
+df_sub1 = datmale %>% select("foreignLanguage", "lyricImport")
+
+dfS1 <- scale(df_sub1)
+
+#summary(df_sub1)
+
+elbow_foreignLyric <- elbow(dfS1,15)
+#plot(elbow_foreignLyric, ylab="Proportion of Variance", xlab = "K")
+
+clusts1<- kmeans(dfS1,centers = 4, nstart = 20)
+
+plot(df_sub1$foreignLanguage,df_sub1$lyricImport,
+     col = clusts1$cluster,
+     pch = 16,
+     ylab = "Importance of Lyrics",
+     xlab = "How often they listen to foreign music",
+     main = "Male Often Listen vs Lyrics Import")
+abline(lm(df_sub1$foreignLang ~df_sub1$lyricImport))
+```
+figure4
+
+```{r}
+datfemale <- dat %>% filter(gender == "Female")
+
+df_sub1 = datfemale %>% select("foreignLanguage", "lyricImport")
+
+dfS1 <- scale(df_sub1)
+# summary(df_sub1)
+elbow_foreignLyric <- elbow(dfS1,13)
+# plot(elbow_foreignLyric, ylab="Proportion of Variance", xlab = "K")
+
+clusts1<- kmeans(dfS1,centers = 3, nstart = 20)
+
+plot(df_sub1$foreignLanguage,df_sub1$lyricImport,
+     col = clusts1$cluster,
+     pch = 16,
+     ylab = "Importance of Lyrics",
+     xlab = "How often you listen to foriegn music",
+     main = "Female Often Listen vs Lyrics Import")
+abline(lm(df_sub1$foreignLang ~ df_sub1$lyricImport))
+```
+figure5
+
+On average, males GSST Students care less about the lyrics when listening to music, and yet have a stronger negative correlation between listening to foreign music and how important the lyrics are.
+
+```{r}
+boxplot(dat$hoursWeek~dat$strand,col = c("green","red","blue"),
+        ylab= "Hours of listening per week",
+        xlab = "Strand",
+        main =" Hours per week by strand")
+```
+figure6
+
+### Analysis for Hours per strand. 
+Comp sci has significantly the most hours per week of listening, followed by Biochem and then engineering. Engineering's spread is very tight, while comp sci has a huge variance, and Biochem somewhere in between that. (one outlier for biochem). This supports Hypothesis 1, "The majority of Computer Science students are music oriented.".
+
+## Genre statistics
+```{r pressure, echo=FALSE}
+# political variables
+gen <- select(dat, "genre")
+(frq <- table(dat$genre))
+n <- length(dat$genre)
+
+prop <- frq/n
+(prop <- round(prop,2))
+
+pie(prop,
+    labels = names(prop),
+    col = c("#806b49","#b4bb98", "#2c2c2c", "#6c7c6c", "#acc9ab","#544c3c", "#5c5c4c"),
+    radius = 1,
+    main = "Genre Pie")
+```
+figure7
+
+This PIE GRAPH simple show the popularity of each genre in the overall population with pop being the most enjoyed. Nearly 50%. Jazz,, Lofi, R&B have the lowest engagment with one vote for each of them. 
+
+### Testing Genre by Gender
+```{r}
+ggplot(data = dat, aes(x = genre,fill=gender))+
+  geom_bar(position=position_dodge())+
+  ggtitle("Genres and their popularity with Females and Males")+
+  scale_fill_manual(values=c("#af4c47", 
+                             "#acc9ab" 
+                             ))
+
+```
+figure8
+
+This plot shows the genres and their popularity with males and females. In the case of the Rap genre, more males enjoyed rap than females with 3 males and 2 females displayed in this graph, though not enough sample to be significant.
+
+### Supplemantary graphs
+```{r}
+dat_sub <- dat %>% select(gender, genre)
+subFemale <- dat_sub %>% filter(gender == "Female")
+barplot(table(subFemale),
+        col = "pink",
+        main = "Female favorite genre",
+        ylab = "Number of Favorites",
+        xlab = "genre")
+```
+figure9
+
+```{r}
+subMale <- dat_sub %>% filter(gender == "Male")
+barplot(table(subMale),
+        col = "dodgerblue",
+        main = "Male favorite genre",
+        ylab = "Number of Favorites",
+        xlab = "genre")
+```
+figure10
+
+### Hypothesis testing
+```{r}
+mean(dat$lyricImport) # to know what to input for mu
+mean(dat$oftenListen)
+t.test(datmale$lyricImport, datfemale$lyricImport,
+       alternative = c("two.sided", "less", "greater"),
+       mu = 54.45)
+t.test(datmale$oftenListen,datfemale$oftenListen,
+       alternative = c("two.sided", "less", "greater"),
+       mu = 80.1 )
+```
+
+
+
+Results and Conclusions:
+
+The following hypotheses were supported by the analysis
+
+1. The majority of Computer Science students are music oriented. (Computer Science had the highest average reported hours of listening per week, figure 6)
+
+2. Those who listen to music more often will have a stronger effect on their mood and personality.(positive correlation shown in figure2)
+
+5. Those who use music apps besides Apple Music and Spotify are more likely to find lyrics less important.(Grouping displayed in figure1)
+
+The following hypotheses were not supported or rejected.
+
+3. The most popular genre will have similar rates of lyrics importance. (Not able to be properly tested)
+
+4. Males will be more likely to listen to rap music.(Not able to be properly tested, shown in figure 8-10)
+
+5. Those who use music apps besides Apple Music and Spotify are more likely to listen to music from other languages (Contradicted in figure1)
+
+Hypothesis testing conclusions:
+There is a significant different between males and females in their importance places upon lyrics, with males placing lower importance.
+There is a significant difference between males and females in how often they listen to music, with females having a higher average.
+
+
+
+
+
+
+
