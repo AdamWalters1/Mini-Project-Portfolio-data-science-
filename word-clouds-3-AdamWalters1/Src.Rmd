@@ -1,0 +1,140 @@
+---
+title: "Src"
+author: "Adam Walters"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rio)
+library(readxl)
+library(openxlsx)
+library(tm)
+library(wordcloud)
+library(colorRamps)
+```
+```{r}
+dat <- import("./data/classNoMiss.xlsx",which = 1)
+dict <- import("./data/classNoMiss.xlsx",which = 2)
+```
+
+
+```{r}
+colInd <- which(names(dat) %in% c("code","strengths","gains"))
+
+dat2 <- dat[,colInd]
+```
+
+
+```{r}
+corpS <- Corpus(VectorSource(dat2$strengths))
+corpG <- Corpus(VectorSource(dat2$gains))
+```
+
+```{r, eval = FALSE}
+inspect(corpS)
+inspect(corpG)
+```
+
+```{r, warning = FALSE}
+corpS <- tm_map(corpS, content_transformer(tolower))
+corpS <- tm_map(corpS, removeNumbers)
+corpS <- tm_map(corpS, removePunctuation)
+corpS <- tm_map(corpS, stripWhitespace)
+corpS <- tm_map(corpS,removeWords,stopwords("english"))
+
+corpG <- tm_map(corpG, content_transformer(tolower))
+corpG <- tm_map(corpG, removeNumbers)
+corpG <- tm_map(corpG, removePunctuation)
+corpG <- tm_map(corpG, stripWhitespace)
+corpG2 <- tm_map(corpG, stripWhitespace)
+corpG <- tm_map(corpG,removeWords,stopwords("english"))
+
+```
+
+```{r}
+# inspect(corpG)
+termDocS <- TermDocumentMatrix(corpS)
+termDocS
+termDocSM <- as.matrix(termDocS)
+
+termDocG <- TermDocumentMatrix(corpG)
+termDocG
+termDocGM <- as.matrix(termDocG)
+
+termDocG2 <- TermDocumentMatrix(corpG2)
+termDocG2
+termDocG2M <- as.matrix(termDocG2)
+# inspect(termDocG)
+```
+
+```{r}
+termS <- sort(rowSums(termDocSM),decreasing=TRUE)
+termS2 <- data.frame(word = names(termS),freq=termS)
+
+termG <- sort(rowSums(termDocGM),decreasing=TRUE)
+termG_2 <- data.frame(word = names(termG),freq=termG)
+
+termG2 <- sort(rowSums(termDocG2M),decreasing=TRUE)
+termG2_2 <- data.frame(word = names(termG2),freq=termG2)
+
+
+```
+
+```{r,warning = FALSE}
+
+## word cloud for corpS
+numTermsGet2 <- sum(termS2$freq > 1)
+
+cols2 <- blue2green2red(numTermsGet2)
+
+wordcloud(termS2$word[termS2$freq >1],
+          termS2$freq[termS2$freq >1]
+          ,scale = c(2,0.5),
+          min.freq = 2, rot.per = 0.5, colors = cols2,
+          random.color = FALSE, ordered.colors = TRUE,
+          random.order = FALSE)
+
+```
+
+```{r, warning = FALSE}
+# word cloud for corpG without stop words
+numTermsGet2 <- sum(termG_2$freq > 1)
+
+cols2 <- blue2green2red(numTermsGet2)
+
+wordcloud(termG_2$word[termG_2$freq >1],
+          termG_2$freq[termG_2$freq >1]
+          ,scale = c(2,0.5),
+          min.freq = 2, rot.per = 0.5, colors = cols2,
+          random.color = FALSE, ordered.colors = TRUE,
+          random.order = FALSE)
+```
+
+```{r, warning = FALSE}
+# word cloud for corpG with stop words
+numTermsGet2 <- sum(termG2_2$freq > 1)
+
+cols2 <- blue2green2red(numTermsGet2)
+
+wordcloud(termG2_2$word[termG2_2$freq >1],
+          termG2_2$freq[termG2_2$freq >1]
+          ,scale = c(2,0.5),
+          min.freq = 2, rot.per = 0.5, colors = cols2,
+          random.color = FALSE, ordered.colors = TRUE,
+          random.order = FALSE)
+```
+
+5. corp G has more technical terms, like data, analyzing. Corp S has many positive connotation words. Corp G being about what the students hope to gain explains why they include technical data terms.Corp S being about their strengths is why its so positive.
+
+```{r}
+# View(dict)
+```
+
+6. looking at the corp G word cloud, I get the impression of practical, technical people. Looking at the corp S word cloud, I get the impression of a motivational speaker at a middle school.
+
+
