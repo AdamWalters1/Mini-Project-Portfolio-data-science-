@@ -1,0 +1,301 @@
+---
+title: "Proposal"
+author: "Adam Walters"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+df <- read.csv("~/Data Science/ds-final-AdamWalters1/Pokemon.csv", header=TRUE, skip = 0)
+```
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+```
+
+```{r}
+stat_percentages <- df[, c("hp", "attack", "defense", "sp_attack", "sp_defense", "speed")] / df$total * 100
+summary_stat_percentages <- summary(stat_percentages)
+
+boxplot_df <- stack(stat_percentages)
+ggplot(boxplot_df, aes(x = ind, y = values)) +
+  geom_boxplot(fill = "#99CCFF", color = "#3366CC") +
+  labs(x = "Stat", y = "Percentage of Total (%)") +
+  ggtitle("Distribution of Stats as a Percentage of Total") +
+  theme_minimal()
+```
+
+surprisingly balanced.
+
+```{r}
+
+# Add columns for attack stats as a percent of total stats
+df <- df %>%
+  mutate(
+    attack_percent = attack / total * 100,
+    sp_attack_percent = sp_attack / total * 100,
+    attack_sp_percent = (attack + sp_attack) / total * 100
+  )
+
+# Subset data for t-test
+legendary_pokemon <- df %>% filter(legendary == TRUE)
+normal_pokemon <- df %>% filter(legendary == FALSE)
+
+# Perform t-test
+t_test_result <- t.test(legendary_pokemon$attack_sp_percent, normal_pokemon$attack_sp_percent)
+print(t_test_result)
+
+# Visualize with a bar plot
+t_test_df <- data.frame(
+  Group = c("Legendary", "Normal"),
+  Mean = c(mean(legendary_pokemon$attack_sp_percent), mean(normal_pokemon$attack_sp_percent)),
+  SD = c(sd(legendary_pokemon$attack_sp_percent), sd(normal_pokemon$attack_sp_percent))
+)
+
+ggplot(t_test_df, aes(x = Group, y = Mean, fill = Group)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = Mean - SD, ymax = Mean + SD), width = 0.2) +
+  labs(x = "Pokémon Group", y = "Mean Attack + Special Attack (%)", fill = NULL) +
+  ggtitle("Mean Attack + Special Attack % of Total Stats\n(Legendary vs. Normal Pokémon)") +
+  theme_minimal()
+
+```
+
+```{r}
+# Create a new column to indicate if a Pokémon is Electric type
+df <- df %>%
+  mutate(is_electric = ifelse(type1 == "Electric" | type2 == "Electric", 1, 0))
+
+# Subset data for t-test
+electric_pokemon <- df %>% filter(is_electric == 1)
+non_electric_pokemon <- df %>% filter(is_electric == 0)
+
+# Perform t-test
+t_test_result <- t.test(electric_pokemon$speed, non_electric_pokemon$speed)
+print(t_test_result)
+
+# Visualize with a boxplot and jitter plot
+ggplot(df, aes(x = as.factor(is_electric), y = speed)) +
+  geom_jitter(width = 0.2, alpha = 0.6) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) +
+  labs(x = "Electric Type (0 = No, 1 = Yes)", y = "Speed") +
+  ggtitle("Speed of Electric vs. Non-Electric Pokémon") +
+  theme_minimal()
+
+```
+
+electric types do have a significantly higher speed on average
+
+```{r}
+# Linear regression to analyze the relationship between HP and Defense/Special Defense
+hp_defense_regression <- lm(hp ~ defense + sp_defense, data = df)
+
+# Summary of the regression model
+summary(hp_defense_regression)
+
+# Visualize the relationship between HP and Defense/Special Defense
+ggplot(df, aes(x = defense, y = hp)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(x = "Defense", y = "HP", title = "Relationship between HP and Defense") +
+  theme_minimal()
+
+ggplot(df, aes(x = sp_defense, y = hp)) +
+  geom_point(color = "green", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "orange") +
+  labs(x = "Special Defense", y = "HP", title = "Relationship between HP and Special Defense") +
+  theme_minimal()
+
+```
+
+clear positive relationship
+
+```{r}
+# K-Means Clustering
+set.seed(123)
+pokemon_stats <- df[, c("hp", "attack", "defense", "sp_attack", "sp_defense", "speed")]
+kmeans_result <- kmeans(pokemon_stats, centers = 4)
+pokemon_stats$cluster <- as.factor(kmeans_result$cluster)
+
+# scatter plot
+ggplot(pokemon_stats, aes(x = attack, y = defense, color = cluster)) +
+  geom_point(size = 3, alpha = 0.7) +
+  labs(x = "Attack", y = "Defense") +
+  ggtitle("K-Means Clustering of Pokémon Based on Stats") +
+  theme_minimal()
+
+# Multi-Dimensional Scaling Analysis
+mds_result <- cmdscale(dist(pokemon_stats))
+
+# Visualize MDS plot
+mds_df <- as.data.frame(mds_result)
+mds_df$cluster <- pokemon_stats$cluster
+ggplot(mds_df, aes(x = V1, y = V2, color = cluster)) +
+  geom_point(size = 3, alpha = 0.7) +
+  labs(x = "Dimension 1", y = "Dimension 2") +
+  ggtitle("Multi-Dimensional Scaling (MDS) Plot") +
+  theme_minimal()
+
+# Cluster Analysis by Type
+cluster_type_data <- df[, c("hp", "attack", "defense", "sp_attack", "sp_defense", "speed", "type1")]
+
+cluster_type_data$type1 <- gsub("Blastoise", "Water", cluster_type_data$type1)
+cluster_type_data$type1 <- gsub("Graass", "Grass", cluster_type_data$type1)
+
+type_clusters <- aggregate(cluster_type_data[, 1:6], by = list(cluster_type_data$type1), FUN = mean)
+type_clusters$type1 <- factor(type_clusters$Group.1, levels = type_clusters$Group.1[order(type_clusters$hp)])
+
+ggplot(type_clusters, aes(x = type1)) +
+  geom_bar(aes(y = hp), fill = "#66CC99", alpha = 0.7, stat = "identity") +
+  geom_bar(aes(y = attack), fill = "#FF6666", alpha = 0.7, stat = "identity") +
+  geom_bar(aes(y = defense), fill = "#FFCC66", alpha = 0.7, stat = "identity") +
+  geom_bar(aes(y = sp_attack), fill = "#6699CC", alpha = 0.7, stat = "identity") +
+  geom_bar(aes(y = sp_defense), fill = "#FF99CC", alpha = 0.7, stat = "identity") +
+  geom_bar(aes(y = speed), fill = "#9999CC", alpha = 0.7, stat = "identity") +
+  labs(x = "Type", y = "Average Stat Value", fill = NULL) +
+  ggtitle("Average Stats by Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+type_clusters <- aggregate(cluster_type_data[, 1:6], by = list(cluster_type_data$type1), FUN = mean)
+colnames(type_clusters)[1] <- "type1"
+
+# Reshape the data to long format for easier plotting
+type_clusters_long <- pivot_longer(type_clusters, cols = hp:speed, names_to = "Stat", values_to = "Value")
+
+# Plot the data using ggplot2
+ggplot(type_clusters_long, aes(x = type1, y = Value, fill = Stat)) +
+  geom_col(position = "stack", alpha = 0.7) +
+  labs(x = "Type", y = "Average Stat Value", fill = "Stat") +
+  ggtitle("Average Stats by Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("hp" = "#66CC99", "attack" = "#FF6666", "defense" = "#FFCC66", 
+                               "sp_attack" = "#6699CC", "sp_defense" = "#FF99CC", "speed" = "#9999CC"))
+```
+
+
+```{r}
+# function to assign generations based on Pokédex entry numbers
+assign_generation <- function(number) {
+  if (number >= 1 && number <= 151) {
+    return("Gen 1")
+  } else if (number >= 152 && number <= 251) {
+    return("Gen 2")
+  } else if (number >= 252 && number <= 386) {
+    return("Gen 3")
+  } else if (number >= 387 && number <= 493) {
+    return("Gen 4")
+  } else if (number >= 494 && number <= 649) {
+    return("Gen 5")
+  } else if (number >= 650 && number <= 721) {
+    return("Gen 6")
+  } else if (number >= 722 && number <= 809) {
+    return("Gen 7")
+  } else if (number >= 810 && number <= 898) {
+    return("Gen 8")
+  } else {
+    return("Unknown Generation")
+  }
+}
+
+# Apply the function to assign generations to each Pokémon
+df$generation <- sapply(df$number, assign_generation)
+
+
+```
+
+```{r}
+# Stats Across Generations
+generation_stats <- df %>%
+  group_by(generation) %>%
+  summarise(
+    Mean_HP = mean(hp),
+    Mean_Attack = mean(attack),
+    Mean_Defense = mean(defense),
+    Mean_SP_Atk = mean(sp_attack),
+    Mean_SP_Def = mean(sp_defense),
+    Mean_Speed = mean(speed)
+  ) %>%
+  gather(Stat, Mean_Value, -generation)
+
+# Reorder the generations
+generation_stats$generation <- factor(generation_stats$generation, levels = unique(generation_stats$generation))
+
+```
+
+
+
+```{r}
+ggplot(generation_stats, aes(x = generation, y = Mean_Value, fill = Stat)) +
+  geom_boxplot(alpha = 0.7, position = position_dodge(width = 0.8)) +
+  labs(x = "Generation", y = "Average Stat Value", fill = "Stat") +
+  ggtitle("Stats Across Generations") +
+  scale_fill_manual(values = c("HP" = "#66CC99", "Attack" = "#FF6666", "Defense" = "#FFCC66", 
+                                "SP Atk" = "#6699CC", "SP Def" = "#FF99CC", "Speed" = "#9999CC")) +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+hard to get anything from this
+
+```{r}
+# Plotting Stats Across Generations with Grouped Scatter Plot
+ggplot(generation_stats, aes(x = Stat, y = Mean_Value, color = generation, label = generation)) +
+  geom_point(position = position_dodge(width = 0.5), size = 4) +
+  labs(x = "Statistic", y = "Average Stat Value", color = "Generation") +
+  ggtitle("Stats Across Generations") +
+  theme_minimal() +
+  theme(legend.position = "top") 
+```
+
+much better
+
+```{r}
+
+
+# Normalize Mean_Value
+generation_stats <- generation_stats %>%
+  group_by(Stat) %>%
+  mutate(Normalized_Value = (Mean_Value - min(Mean_Value)) / (max(Mean_Value) - min(Mean_Value)))
+
+# Plot radar chart in singular window
+ggplot(generation_stats, aes(x = Stat, y = Normalized_Value, group = generation, color = generation)) +
+  geom_polygon(alpha = 0.3) +
+  geom_line() +
+  coord_polar() +
+  labs(title = "Overall Stats Profile of Pokémon Across Generations", x = NULL, y = NULL, color = "Generation") +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+
+Radar plots. Not really sure what this tells me
+```{r}
+# Plot radar chart for each generation and print to separate windows
+for (gen in unique(generation_stats$generation)) {
+  # Subset data for the current generation
+  gen_data <- generation_stats[generation_stats$generation == gen, ]
+  
+  # Create radar chart
+  radar_plot <- ggplot(gen_data, aes(x = Stat, y = Normalized_Value, group = generation, color = generation)) +
+    geom_polygon(alpha = 0.3) +
+    geom_line() +
+    coord_polar() +
+    labs(title = paste("Stats Profile of Pokémon (", gen, ")", sep = ""), x = NULL, y = NULL, color = "Generation") +
+    theme_minimal()
+  
+  # Print radar chart to separate window
+  print(radar_plot)
+}
+
+```
+
