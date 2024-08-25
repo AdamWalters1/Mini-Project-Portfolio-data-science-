@@ -1,0 +1,240 @@
+---
+title: "image analysis 4"
+author: "Adam Walters"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Image Analysis 2 code
+```{r}
+packages <- c("tidyverse","imager","readxl","wesanderson","RColorBrewer")
+```
+
+```{r}
+library(tidyverse)
+library(imager)
+library(readxl)
+library(wesanderson)
+library(RColorBrewer)
+library(MASS)
+```
+
+```{r}
+df<- read.csv("~/Data Science/R/image-analysis-2-final-AdamWalters1/data/image-analysis-data.csv")
+```
+
+```{r}
+summary(df)
+```
+
+2.
+```{r}
+
+numFeatures <-colSums(df[,-1])
+listFeatures <- names(df)[-1]
+
+orderFeatures <- order(numFeatures,decreasing = TRUE)
+listFeatures[orderFeatures]
+```
+
+6.
+```{r}
+barplot(numFeatures, main = "Feature Popularity", xlab = "Features", ylab = "Count")
+```
+
+7.
+```{r}
+barplot(numFeatures, main = "Feature Popularity", xlab = "Count", ylab = "Features", horiz = TRUE, col = "lightblue")
+
+features = data.frame(Feature = listFeatures, Count = numFeatures)
+ggplot(features,aes(x=reorder(Feature, Count), y=Count,fill = Feature))+
+       geom_bar(stat = "identity")+
+         coord_flip()+
+         scale_fill_brewer(palette = "Set3")+
+         theme_minimal()+
+         theme(legend.position="none")+
+         xlab("Count")+
+         ylab("Feature")+
+         ggtitle("Features Bases on Count")
+```
+
+```{r}
+bb1 <- load.image("images/bb1.jpeg")
+plot(bb1)
+```
+
+10.
+```{r}
+# Sum the values in each row (excluding the first column)
+image_sums <- rowSums(df[, -1])
+
+# Find the index of the image with the highest sum
+image_with_most_features <- which.max(image_sums)
+
+# Get the corresponding image ID
+image_id_with_most_features <- df$imageId[image_with_most_features]
+image_id_with_most_features
+```
+
+```{r}
+listImages <- df[,1]
+orderImages <- order(image_sums, decreasing = TRUE)
+orderImages
+```
+
+14.
+```{r}
+top_5_images <- orderImages[1:5]
+
+# Get the corresponding image IDs
+top_5_image_ids <- df$imageId[top_5_images]
+top_5_image_ids
+```
+
+```{r}
+
+for (image_id in top_5_image_ids) {
+  bb <- paste0("images/bb", image_id, ".jpeg")
+  image <- load.image(bb)
+  plot(image)
+}
+```
+
+```{r}
+cbind(image=orderImages,count=image_sums[orderImages])[1:5,]
+```
+
+
+# Image Analysis 3
+```{r}
+dat2 <- df[,-1]
+dat <- df
+km2<-kmeans(dat2,2,nstart=20)
+
+cbind(dat[,-1],km2$cluster)
+```
+
+```{r}
+clId1<-dat[km2$cluster==1,1]
+clId2<-dat[km2$cluster==2,1]
+
+clImages1<-sapply(clId1,function(id)paste("images/bb",id,".jpeg",sep=""))
+clImages2<-sapply(clId2,function(id)paste("images/bb",id,".jpeg",sep=""))
+
+par(mfrow=c(2,3),mar=c(2.1,4.1,1.1,1.1))
+plot(load.image(clImages1[1]),main="cl1")
+plot(load.image(clImages1[2]),main="cl1")
+plot(load.image(clImages1[3]),main="cl1")
+plot(load.image(clImages2[1]),main="cl2")
+plot(load.image(clImages2[2]),main="cl2")
+plot(load.image(clImages2[3]),main="cl2")
+```
+
+```{r}
+elbow <- function(setDat,maxK){
+  prop<-rep(0,maxK)
+  for(k in 1:maxK){
+    km<-kmeans(setDat, centers=k,nstart = 20)
+    prop[k]<-km$betweenss/km$totss
+  }
+  return(prop)
+}
+
+elbow_<-elbow(dat2,15)
+```
+
+```{r}
+plot(elbow_)
+```
+
+```{r}
+km5<-kmeans(dat2,5,nstart=20)
+
+clId1<-dat[km5$cluster==1,1]
+clId2<-dat[km5$cluster==2,1]
+clId3<-dat[km5$cluster==3,1]
+clId4<-dat[km5$cluster==4,1]
+clId5<-dat[km5$cluster==5,1]
+
+clImages1<-sapply(clId1,function(id)paste("images/bb",id,".jpeg",sep=""))
+clImages2<-sapply(clId2,function(id)paste("images/bb",id,".jpeg",sep=""))
+clImages3<-sapply(clId3,function(id)paste("images/bb",id,".jpeg",sep=""))
+clImages4<-sapply(clId4,function(id)paste("images/bb",id,".jpeg",sep=""))
+clImages5<-sapply(clId5,function(id)paste("images/bb",id,".jpeg",sep=""))
+
+par(mfrow=c(2,3),mar=c(2.1,4.1,1.1,1.1))
+plot(load.image(clImages1[1]),main="cl1")
+plot(load.image(clImages1[2]),main="cl1")
+plot(load.image(clImages2[1]),main="cl2")
+plot(load.image(clImages2[2]),main="cl2")
+plot(load.image(clImages3[1]),main="cl3")
+plot(load.image(clImages3[2]),main="cl3")
+plot(load.image(clImages4[1]),main="cl4")
+plot(load.image(clImages4[2]),main="cl4")
+plot(load.image(clImages5[1]),main="cl5")
+plot(load.image(clImages5[2]),main="cl5")
+```
+
+# Image Analysis 4!!
+
+1.
+```{r}
+k<-5
+cols <- rainbow(k)
+
+temp<-as.data.frame(km5$center)
+names(temp)<-paste("V",1:dim(temp)[[2]],sep="")
+```
+
+2.
+```{r}
+parcoord(temp,col=cols,lwd=2,ylim=c(0,2),var.label = FALSE)
+legend("topright",horiz = FALSE, legend=as.character(1:k),col=cols,
+       lty=rep(1,k),lwd=2,cex=.5,bty="n",ncol=2,title="cluster")
+legend("topleft",horiz = FALSE, ncol=3,
+       legend = paste(names(temp),names(dat[,-1])),cex=.5)
+         
+```
+
+4.
+```{r}
+summary(km5$centers)
+
+```
+
+### MDS
+
+4. -> 7.
+```{r}
+ #for continuous data
+distPrev<-dist(dat[,-1])
+mdsPrev<-cmdscale(distPrev)
+plot(mdsPrev, col = cols[km5$cluster],xlab="MDS Coord 1",
+     ylab="MDS coord 2", main="Original Distance Measure")
+legend("bottomright",legend=1:6,pch=1,col=cols,cex=.5)
+
+# for binary data (including image id's)
+image_ids <- dat[, 1]
+distNew<-dist(dat[,-1],method="binary")
+mdsNew<-cmdscale(distNew)
+plot(mdsNew, col = cols[km5$cluster],xlab="MDS Coord 1",
+     ylab="MDS coord 2", main="Original Distance Measure")
+legend("bottomright",legend=1:6,pch=1,col=cols,cex=.5)
+text(mdsNew, labels=image_ids, pos=1, cex=0.7, col=cols[km5$cluster])
+```
+
+11.
+```{r}
+means <- tapply(dat$tree, km5$cluster, mean)
+
+# Create a bar graph for mean variable values across different clusters
+barplot(means, 
+        main = "Bar Graph for Different Clusters",
+        xlab = "Cluster",
+        ylab = "trees")
+```
+
