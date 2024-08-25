@@ -1,0 +1,131 @@
+---
+title: "Meme Analysis"
+author: "Adam Walters"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+dat <- read.csv("~/Data Science/R/meme-analysis-AdamWalters1/memes - Sheet1.csv")
+```
+
+```{r, error = FALSE}
+library(tidyverse)
+library(imager)
+library(readxl)
+library(wesanderson)
+library(RColorBrewer)
+library(MASS)
+library(gplots)
+
+library(stats)
+library(ggplot2)
+
+```
+
+No data cleaning needed.
+
+3.
+```{r}
+
+feature_counts <- rowSums(dat[, -c(1)])
+
+
+barplot(feature_counts, main = "Number of Features Seen", 
+        xlab = "Painting", ylab = "Number of Features")
+
+```
+
+4.
+```{r}
+# top 5 paintings with most features
+
+total_features <- rowSums(dat[, -c(1)])
+
+
+top <- order(total_features, decreasing = TRUE)[1:5]
+
+#getting names
+top_paintings_names <- dat[top, 1]
+top_paintings_names
+
+```
+
+5.
+```{r}
+
+within_cluster_variance <- c()
+
+for (i in 1:10) {
+  km <- kmeans(dat[, -c(1)], centers = i)
+  within_cluster_variance[i] <- km$tot.withinss
+}
+
+#elbow plot
+plot(1:10, within_cluster_variance, 
+     main = "Elbow Plot",
+     xlab = "Number of Clusters", ylab = "Within-cluster Var")
+
+```
+
+6.
+```{r}
+# k-means
+k <- 3
+km <- kmeans(dat[, -c(1)], centers = k, nstart = 20)
+
+temp<-as.data.frame(km$center)
+names(temp)<-paste("V",1:dim(temp)[[2]],sep="")
+
+cols <- rainbow(k)
+parcoord(temp,col=cols,lwd=2,ylim=c(0,1.6),var.label = FALSE)
+legend("topright",horiz = FALSE, legend=as.character(1:k),col=cols,
+       lty=rep(1,k),lwd=2,cex=.5,bty="n",ncol=2,title="cluster")
+legend("topleft",horiz = FALSE, ncol=3,
+       legend = paste(names(temp),names(dat[,-1])),cex=.5)
+```
+
+7..
+```{r}
+#mds
+mds_coords <- cmdscale(dist(dat[, -c(1)], method = "binary"))
+
+plot(mds_coords, col = cols[km$cluster], pch = 16, main = "MDS Plot with Clusters")
+legend("topright", legend = unique(km$cluster), col = cols[km$cluster], pch = 16, title = "Cluster")
+
+```
+
+8.
+```{r}
+dat2 <- dat
+#fitting logistic regression model
+logit_model <- glm(Funny ~ Person, data = dat2, family = "binomial")
+#predicted probabilities
+dat2$predicted_probability <- predict(logit_model, type = "response")
+#binary logistic regression plot
+ggplot(dat2, aes(x = Person, y = predicted_probability)) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE) +
+  geom_point() +
+  labs(x = "Person in meme", y = "Predicted Probability of funny meme") +
+  ggtitle("Binary Logistic Regression Plot")
+
+```
+
+source i learned from: https://www.datacamp.com/tutorial/logistic-regression-R
+
+9.
+The more a person is featured in a meme, the more likely it is to be funny.
+
+Cluster 1 features the specified coding languages much more.
+
+Anime memes are more likely to have top text and bottom text according to the parallel plot. 
+
+The max number of features in any given meme is only 7.
+
+The clusters are not very defined, and there is no specific k that is significantly better.
+
+Memes 17, 46,74 and 94 each have 7 features.
