@@ -1,0 +1,196 @@
+---
+title: "PetNames Analysis"
+author: "Adam Walters"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+df <- read_csv("data/PetNamesCleaned.csv")
+```
+
+### Renaming column names for my sanity
+```{r}
+# Assuming your data frame is named 'df' and the column you want to rename is 'old_column'
+library(dplyr)
+
+# Rename the 'old_column' to 'new_column'
+# Assuming your data frame is named 'df' and the column you want to rename is at column number 2
+column_number <- 1
+new_column_name <- "Type"
+
+# Rename the column at column_number to new_column_name
+names(df)[column_number] <- new_column_name
+
+column_number <- 2
+new_column_name <- "fullName"
+
+# Rename the column at column_number to new_column_name
+names(df)[column_number] <- new_column_name
+
+column_number <- 3
+new_column_name <- "Name"
+
+# Rename the column at column_number to new_column_name
+names(df)[column_number] <- new_column_name
+column_number <- 4
+new_column_name <- "Age"
+
+# Rename the column at column_number to new_column_name
+names(df)[column_number] <- new_column_name
+column_number <- 5
+new_column_name <- "Breed"
+
+# Rename the column at column_number to new_column_name
+names(df)[column_number] <- new_column_name
+
+
+```
+
+```{r}
+library(tidyverse)
+```
+
+1.
+I have 1784 rows.
+2.
+```{r}
+library(ggplot2)
+
+CandD <- df %>% filter(Type %in% c("Cat", "Dog"))
+CandD$Age <- as.numeric(CandD$Age)
+
+ggplot(CandD, aes(x = Type, y = Age, fill = Type)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Pet Ages for Dogs and Cats",
+       x = "Pet Type",
+       y = "Pet Age") +
+  theme_minimal()
+
+```
+
+The average reported age for dogs and cats is somehow similar, despite cats typically having the longer life span.Its important to note that this data does not include values that are less than 1 year of age, because it was too annoying to use.
+
+3.
+```{r}
+
+
+popular_names <- df %>%
+  group_by(fullName) %>%
+  summarise(name_count = n()) %>%
+  arrange(desc(name_count))
+
+
+cat("Most popular pet names:\n")
+print(head(popular_names, 10)) 
+
+# Get the top name
+top_name <- popular_names$Name[1]
+
+
+
+```
+
+The top 5 full names were Sophie, Bella, Maggie, Charlie, Lily. Note that this is probably really inaccurate because it doesnt account for last names or anything.
+
+4.
+```{r}
+popular_names <- df %>%
+  group_by(Name) %>%
+  summarise(name_count = n()) %>%
+  arrange(desc(name_count))
+
+
+cat("Most popular pet names:\n")
+print(head(popular_names, 10)) 
+
+# Get the top name
+top_name <- popular_names$Name[1]
+
+
+```
+
+The most popular everyday names is Charlie, Daisy, Bella, Max and Lucy.
+
+5.
+```{r}
+library(dplyr)
+
+
+bottom_dogs <- df %>%
+  filter(Type == "Dog", !is.na(Breed)) %>%
+  group_by(Breed) %>%
+  summarise(breed_count = n()) %>%
+  arrange(breed_count)
+
+
+print(head(bottom_dogs, 3))  
+
+```
+
+It appears someone entered the age in the breed column. Also a mess??? Akita sounds like a real breed.
+
+6.
+```{r}
+library(ggplot2)
+
+pet_ages <- df %>% filter(Type %in% c("Cat", "Dog","Bird","Other","Gerbil/Guinea pig/Hamster"))
+pet_ages$Age <- as.numeric(pet_ages$Age)
+
+ggplot(pet_ages, aes(x = Type, y = Age, fill = Type)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Pet Ages per type",
+       x = "Pet Type",
+       y = "Pet Age") +
+  theme_minimal()
+
+```
+
+The average age for Rodent pets is lower, as expected. Other includes an elephant and some turtles i think, so those are the outliers probably.
+
+7.
+```{r}
+library(dplyr)
+
+cat_data <- df %>%
+  filter(Type == "Cat")
+# Finding most popular cat breeds so the age comparison is readable
+
+most_popular_cat_breeds <- cat_data %>%
+  group_by(Breed) %>%
+  summarise(breed_count = n()) %>%
+  arrange(desc(breed_count))
+
+
+cat("Most popular cat breeds:\n")
+print(head(most_popular_cat_breeds, 10)) 
+
+```
+
+```{r}
+
+selected_cat_breeds <- c("Domestic Shorthair", "Domestic Short Hair", "Tabby", "American Shorthair", "DSH", "Siamese", "Cat", "Domestic Longhair", "Calico")
+
+fcat_data <- df %>%
+  filter(Type == "Cat", Breed %in% selected_cat_breeds)
+fcat_data$Age <- as.numeric(fcat_data$Age)
+# Calculating the average age for each selected breed of cat
+average_age_by_breed <- fcat_data %>%
+  group_by(Breed) %>%
+  summarise(average_age = mean(Age, na.rm = TRUE))
+
+# Create a bar plot
+ggplot(average_age_by_breed, aes(x = Breed, y = average_age, fill = Breed)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Age of Selected Cat Breeds",
+       x = "Breed",
+       y = "Average Age") +
+  theme_minimal()
+
+```
+
