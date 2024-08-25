@@ -1,0 +1,342 @@
+---
+title: "Pixel Analysis"
+author: "Adam Walters"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, error = FALSE}
+library(imager)
+library(rio)
+library(readxl)
+library(tidyverse)
+```
+
+# Pixel Analysis 1
+```{r}
+sat<- import("data/satImage1.xlsx")
+pict <- import("data/onePicture.xlsx")
+dim(sat)
+dim(pict)
+```
+
+```{r}
+names(sat)
+summary(sat)
+names(pict)
+summary(pict)
+```
+
+```{r}
+house <- load.image('images/IMG_1923_rot.jpg')
+#plot(house)
+```
+
+
+```{r}
+house1 <- load.image('images/IMG_1923_rot.jpg')
+house2 <- load.image('images/IMG_1923_rot_low.jpg')
+
+par(mfrow=c(1,2))
+#plot(house1,axes = FALSE)
+#plot(house2,axes = FALSE)
+```
+
+
+```{r}
+plot(house)
+class(house)
+dim(house)
+```
+
+
+```{r}
+print(960*1280)
+```
+
+
+```{r}
+satM <- as.matrix(sat)
+dim(satM)
+```
+
+```{r}
+vecR <- satM[,1]/255
+vecG <- satM[,2]/255
+vecB <- satM[,3]/255
+
+```
+
+12.
+```{r}
+matR<-matrix(vecR,75,40)
+matG<-matrix(vecG,75,40)
+matB<-matrix(vecB,75,40)
+
+```
+
+```{r}
+satA <- array(0,dim = c(75,40,1,3))
+```
+
+```{r}
+satA[,,,1]<-matR
+satA[,,,2]<-matG
+satA[,,,3]<-matB
+```
+
+```{r}
+#plot(satA)
+satA2<-as.cimg(satA)
+#plot(satA2)
+```
+
+# Pixel Analysis 2
+
+1.
+```{r}
+
+pictM <- as.matrix(pict)
+
+pictA <- array(0,dim = c(300,300,1,4))
+```
+
+```{r,knit =FALSE}
+pictA[,,,1]<-matrix(pictM[,1],300,300)
+pictA[,,,2]<-matrix(pictM[,2],300,300)
+pictA[,,,3]<-matrix(pictM[,3],300,300)
+pictA[,,,4]<-matrix(pictM[,4],300,300)
+```
+
+```{r}
+pictA2<-as.cimg(pictA)
+#plot(pictA2)
+```
+
+
+```{r}
+aniFiles<- import("data/animalImagesRgb.xlsx", which = 1)
+aniLabs <- import("data/animalImagesRgb.xlsx", which = 2)
+
+hokFiles<- import("data/hokieImagesRgb.xlsx",which = 1)
+hokLabs<- import("data/hokieImagesRgb.xlsx",which = 2)
+dim(aniFiles)
+dim(aniLabs)
+dim(hokFiles)
+dim(hokLabs)
+```
+
+4.
+```{r}
+
+aniFiles<-as.character(aniFiles$files)
+aniLabs<-as.character(aniLabs$labels)
+hokFiles<-as.character(hokFiles$files)
+hokLabs<-as.character(hokLabs$labels)
+
+```
+
+5.
+```{r}
+calf <- load.image("images/animalsRgb/calf.jpg")
+#plot(calf)
+```
+
+6.
+```{r}
+oneFile <- paste("images/animalsRgb/",aniFiles[6],sep="")
+oneFile
+
+oneImage<-load.image(oneFile)
+#plot(oneImage)
+
+oneFile <- paste("images/animalsRgb/",aniFiles[7],sep="")
+oneFile
+
+oneImage<-load.image(oneFile)
+par(mfrow = c(1,2))
+#plot(oneImage)
+
+```
+
+
+```{r}
+
+for(i in 1:8){
+  oneFile<- paste("images/animalsRgb/",aniFiles[i],sep="")
+  oneImage<-load.image(oneFile)
+  #plot(oneImage)
+}
+
+```
+
+
+```{r}
+imgs<-list()
+for(i in 1:19){
+  oneFile<-paste("images/animalsRgb/",aniFiles[i],sep="")
+  imgs[[i]]<-load.image(oneFile)
+}
+
+#imgs[[15]][91:100,46:50,1,1]
+#imgs[[15]][91:100,46:50,1,2]
+#imgs[[15]][91:100,46:50,1,3]
+```
+
+11 and 12
+```{r}
+setW<-50
+setH<-50
+imgs2<-imgs
+for(i in 1:19){
+  imgs2[[i]]<-resize(imgs[[i]],setW,setH)
+  #print(imgs2[[i]])
+}
+
+dim(imgs[[15]])
+dim(imgs2[[15]])
+
+par(mfrow=c(4,5), mar = c(2.6,4.1,1.1,0.1))
+#for(i in 1:8){
+  #plot(imgs2[[i]],main = aniLabs[i])
+#}
+```
+
+
+
+```{r}
+class(imgs2[[1]])
+n = 19
+imgs3 <- imgs2
+for(i in 1:n){
+  imgs3[[i]] <- as.data.frame(imgs2[[i]])
+}
+
+class(imgs2[[15]])
+class(imgs3[[15]])
+#dim(imgs2[[15]])
+#dim(imgs3[[15]])
+```
+
+
+```{r}
+names(imgs3[[15]])
+```
+
+
+```{r}
+imgCombined <- imgs3[[1]]
+for(i in 2:n){
+  imgCombined<-cbind(imgCombined,imgs3[[i]][,4])
+}
+names(imgCombined)
+
+names(imgCombined)[4:dim(imgCombined)[[2]]]<-aniLabs
+#head(imgCombined)
+
+#dim(imgCombined)
+
+```
+
+```{r}
+imgCombinedT <- t(imgCombined)
+
+#imgCombinedT[1:8,95:98]
+```
+
+```{r}
+temp <- imgCombinedT[1:3,]
+cNames <- paste("xyc",temp[1,],temp[2,],temp[3,],sep="")
+#cNames[1:5]
+
+imgCombinedT2 <- imgCombinedT[-c(1:3),]
+colnames(imgCombinedT2) <- cNames
+#imgCombinedT2[1:4,1:6]
+#dim(imgCombinedT2)
+```
+
+# Pixel Analysis 4
+
+```{r}
+imgCombinedT3 <- scale(imgCombinedT2)
+aniDist <- dist(imgCombinedT3)
+mdsAll<-cmdscale(aniDist,2)
+plot(mdsAll,pch = 16)
+text(mdsAll[,1]+4,mdsAll[,2]+4,aniLabs,cex=0.75)
+```
+
+2. It is interpreted to determine how similar the pictures are to eachother.
+3. Rabbit - Duckling, Ox - Cat, opened
+4. yes they are similar in color, while cat and ox are certainly very different. Cat is grey and white, while the ox is brown and tan.
+
+
+5. Yes, for example each of the animals has little green and blue, so the similarity will massively change.
+```{r}
+blueOnly <- imgCombinedT3[,5001:7500]
+blueDist<-dist(blueOnly)
+mdsBlue<-cmdscale(blueDist)
+plot(mdsBlue,pch=16)
+text(mdsBlue[,1]+2,mdsBlue[,2],aniLabs,cex=0.75)
+```
+
+7. Turkey and chick are much closer together than before.
+
+8.
+```{r}
+imgs<-list()
+for(i in 1:9){
+  oneFile<-paste("images/hokiesRgb/",hokFiles[i],sep="")
+  imgs[[i]]<-load.image(oneFile)
+}
+n= 9
+setW<-50
+setH<-50
+imgs2<-imgs
+for(i in 1:n){
+  imgs2[[i]]<-resize(imgs[[i]],setW,setH)
+  #print(imgs2[[i]])
+}
+
+for(i in 1:9){
+  imgs3[[i]] <- as.data.frame(imgs2[[i]])
+}
+imgCombined <- imgs3[[1]]
+for(i in 2:9){
+  imgCombined<-cbind(imgCombined,imgs3[[i]][,4])
+}
+names(imgCombined)
+
+names(imgCombined)[4:dim(imgCombined)[[2]]]<-hokLabs
+
+```
+
+```{r}
+imgCombinedT <- t(imgCombined)
+
+temp <- imgCombinedT[1:3,]
+cNames <- paste("xyc",temp[1,],temp[2,],temp[3,],sep="")
+#cNames[1:5]
+
+imgCombinedT2 <- imgCombinedT[-c(1:3),]
+colnames(imgCombinedT2) <- cNames
+
+imgCombinedT3 <- scale(imgCombinedT2)
+hokDist <- dist(imgCombinedT3)
+mdsAll<-cmdscale(hokDist,2)
+plot(mdsAll,pch = 16)
+text(mdsAll[,1]+8,mdsAll[,2]+3,hokLabs,cex=0.75)
+```
+
+9: The images are split into 3 pretty distinct clusters
+```{r}
+for(i in 1:9){
+  plot(imgs2[[i]],main = hokLabs[i])
+}
+```
+
+
+hokie 6, which is in its own cluster is the only one with extra maroon. hokies 2,5,8 are clusterd and each have the hokie's mouth open.
