@@ -1,0 +1,101 @@
+---
+title: "Sentiment analysis"
+author: "Adam Walters"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning = FALSE}
+library(tm)
+library(wordcloud)
+library(SnowballC)
+library(RColorBrewer)
+library(tidyverse)
+library(MASS)
+library(qdap)
+library(rvest)
+library(xml2)
+```
+
+1.-3.
+```{r}
+urlA <- 'https://www.chewy.com/american-journey-lamb-sweet-potato/dp/135817' 
+urlM <- 'https://www.chewy.com/merrick-real-texas-beef-sweet-potato/dp/227207'
+urlB <- 'https://www.chewy.com/blue-buffalo-wilderness-rocky/dp/49343'
+
+webpageA <- read_html(urlA)
+webpageM <- read_html(urlM)
+webpageB <- read_html(urlB)
+
+parHtmlA <- html_nodes(webpageA, "p")
+parHtmlM <- html_nodes(webpageM, "p")
+parHtmlB <- html_nodes(webpageB, "p")
+
+```
+
+4.-7.
+```{r}
+parA <- html_text(parHtmlA)
+parM <- html_text(parHtmlM)
+parB <- html_text(parHtmlB)
+
+desA<-parA[5]
+desM<-parM[4]
+desB<-parB[5]
+
+ingredA<-parA[6]
+ingredM<-parM[5]
+ingredB<-parB[6]
+
+revA<-parA[40]
+revM<-parM[15]
+revB<-parB[30]
+```
+
+8.
+```{r}
+dogFoodText<-c(desA, desM, desB, ingredA, ingredM, ingredB, revA, revM, revB)
+dogFoodMeta <- as.data.frame(
+  cbind(c("A","M", "B", "A", "M","B","A","M","B"),
+        c("Des","Des","Des","Ingred","Ingred","Ingred","Review","Review","Review")))
+names(dogFoodMeta)<-c("Brand","ParagraphType")
+
+```
+
+```{r}
+summary(dogFoodText)
+dim(dogFoodText)
+summary(dogFoodMeta)
+dim(dogFoodMeta)
+
+```
+
+```{r}
+CorpD1 <- "We switched over to American Journey from another dog food. We have 3 dogs all three love this food. We switched because our youngest dog had very soft poop and started getting bald spots where he was itching. Since switching the dog's bowls are never full because they eat all of it. The bald spots are disappearing, and hair is growing back, and the dog's poop is perfect! So glad we switched." 
+CorpD2 <- "I have been purchasing this product for my dogs for many years and they enjoy it.  My vet always comments on how healthy my dogs are and when we discuss food, he has told me that Merrick is a quality product.  I highly recommend this product.  I can also switch between the different flavors with no stomach upset.  We eat the same thing every day why should our dogs?\n\nI recently received a coupon for a free bag in exchange for this review but I have been using it for more than 5 years."
+CorpD3 <- "Chewy has never disappointed me. I would recommend this company to anyone looking for a better way to provide their fury friends needs." 
+```
+
+11.
+```{r}
+CorpD <- c(CorpD1, CorpD2, CorpD3)
+data_frame <- data.frame(
+  Text = CorpD,
+  Code = c("D1", "D2", "D3")
+)
+p2 <- polarity(data_frame$Text, group = data_frame$Code,
+               polarity.frame=key.pol,negators = negation.words,
+               amplifiers = amplification.words,
+               deamplifiers = deamplification.words,
+               n.before = 2, n.after = 2)
+```
+
+12.
+```{r}
+p2
+```
+
